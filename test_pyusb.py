@@ -1,3 +1,5 @@
+# Small script to test pyUsb installation and find USB devices on RPi
+
 import usb.core
 import usb.util
 

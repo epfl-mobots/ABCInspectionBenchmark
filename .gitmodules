@@ -1,0 +1,3 @@
+[submodule "brood_hostside"]
+	path = brood_hostside
+	url = https://github.com/epfl-mobots/brood-hostside.git

@@ -1,3 +1,5 @@
+# Small script to test VISA installation and find USB devices on RPi through VISA
+
 import pyvisa
 
 # Initialisation de la ressource manager VISA
@@ -16,7 +18,7 @@ if DP832A_addr in resources:
     DCps = rm.open_resource(DP832A_addr) # Connection to the DC power supply
     
     # Configuration de la source DC (exemple : identification de l'instrument)
-    print(DCps.query('*IDN?'))
+    print("DC Source IDN: "+DCps.query('*IDN?'))
 
     # Fermer la connexion
     DCps.close()
