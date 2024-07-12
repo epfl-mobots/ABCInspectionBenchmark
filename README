@@ -1,0 +1,4 @@
+To run this code on a RPi, one needs to install the following libraries:
+- sudo apt install libusb-1.0-0-dev
+- pip install pyvisa
+- pip install pyvisa-py
