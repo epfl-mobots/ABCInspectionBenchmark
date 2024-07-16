@@ -46,16 +46,20 @@ if __name__ == "__main__":
     for i in range(len(ABC_ids)):
         PS.set_channel_voltage(i+1, 12.0, 1.5,ocp=1.5)
         PS.activate_channel(i+1)
-
+    ABCs = []
     try:
         # infer cfg file from ABC board_id
         cfg_paths = [Path(f"./brood_hostside/host/cfg/inspection_cfgs/inspection_{ABC_id}.cfg") for ABC_id in ABC_ids] # The inspection config files to use
         print(cfg_paths)
         for cfg_path in cfg_paths:
             verify_abc_cfg_file(cfg_path)
+        time.sleep(20) # Wait for the ABCs to boot up
         ABCs = [ABCHandle(cfg_path) for cfg_path in cfg_paths] # instantiate ABC objects
-    except Exception:
+
+    except Exception as e:
         # Close the connection to the DC power supply after having deactivated the channels
+        print(f"Problem detected with ABCs setup: {e}")
+        print("Shutting DCPS channels and connection")
         for i in range(len(ABC_ids)):
             PS.deactivate_channel(i+1)
         PS.close()
