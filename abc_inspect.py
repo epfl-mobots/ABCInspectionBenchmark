@@ -14,7 +14,7 @@ import time
 from libPS import PowerSupply
 
 # Make a two element list that contains strings of the board_id of the two ABCs
-ABC_ids = ['abc23'] # the ABCs connected to the RPi (max 2 !!)
+ABC_ids = ['abc24'] # the ABCs connected to the RPi (max 2 because only two 12V sockets on the PS)
 
 def verify_abc_cfg_file(cfg_path): 
     ''' Check if config file exists '''
@@ -71,17 +71,19 @@ if __name__ == "__main__":
             # Log the DCPS data
             DCPS_currents = [PS.query_current(i) for i in range(len(ABC_ids))]
             DCPS_voltages = [PS.query_voltage(i) for i in range(len(ABC_ids))]
-            for i, ABC in enumerate(ABCs):
-                # Send the current and voltage data as data points to influxdb
-                Ipoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_currents[i], "current")
-                Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], "voltage")
-                ABC.db_handle.write_points([Ipoints, Vpoints])
 
             DCPS_meas_counts += 1
             DCPS_meas_counts = DCPS_meas_counts%10
 
-            # Every 10 measurements, log the ABC data
+            # Every 10 measurements, log the DC PS data and ABC data
             if DCPS_meas_counts == 0:
+                # Logging the DCPS data
+                for i, ABC in enumerate(ABCs):
+                    # Send the current and voltage data as data points to influxdb
+                    Ipoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_currents[i], "current")
+                    Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], "voltage")
+                    ABC.db_handle.write_points([Ipoints, Vpoints])
+
                 # Check for new day (to roll over logfiles)
                 for ABC in ABCs:
                     ABC.check_newday_and_roll_logfiles()
@@ -104,12 +106,14 @@ if __name__ == "__main__":
                                 heater_rosen = heater_rosen%10
                                 ABC._activate_dict_of_heaters({heater_rosen:temp_target})
 
-                    time.sleep(1)
+                        time.sleep(0.1)
                         
                 except Exception as e:
                     # Try catching everything, so it can continue if not critical
                     is_bad_err = libui.handle_known_exceptions(e, logger=ABC.log)
                     libui.process_exception(is_bad_err, e, ABC)
+
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
         ABC.log("Stopping inspection - ctrl-c pressed.", level="INF")
