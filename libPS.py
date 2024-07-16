@@ -81,3 +81,9 @@ class PowerSupply:
         Activate the output of the specified channel.
         '''
         self.resource.write(f"OUTP CH{channel},ON")
+
+    def deactivate_channel(self, channel):
+        '''
+        Deactivate the output of the specified channel.
+        '''
+        self.resource.write(f"OUTP CH{channel},OFF")

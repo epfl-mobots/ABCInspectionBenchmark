@@ -48,13 +48,19 @@ if __name__ == "__main__":
     if len(ABC_ids) == 2:
         PS.set_channel_voltage(2, 12.0, 1.5,ocp=1.5)
         PS.activate_channel(2)
-
-    # infer cfg file from ABC board_id
-    cfg_paths = [Path(f"./brood_hostside/host/cfg/inspection_cfgs/inspection_{ABC_id}.cfg") for ABC_id in ABC_ids] # The inspection config files to use
-    print(cfg_paths)
-    for cfg_path in cfg_paths:
-        verify_abc_cfg_file(cfg_path)
-    ABCs = [ABCHandle(cfg_path) for cfg_path in cfg_paths] # instantiate ABC objects
+        
+    try:
+        # infer cfg file from ABC board_id
+        cfg_paths = [Path(f"./brood_hostside/host/cfg/inspection_cfgs/inspection_{ABC_id}.cfg") for ABC_id in ABC_ids] # The inspection config files to use
+        print(cfg_paths)
+        for cfg_path in cfg_paths:
+            verify_abc_cfg_file(cfg_path)
+        ABCs = [ABCHandle(cfg_path) for cfg_path in cfg_paths] # instantiate ABC objects
+    except Exception:
+        # Close the connection to the DC power supply after having deactivated the channels
+        for i in range(len(ABC_ids)):
+            PS.deactivate_channel(i)
+        PS.close()
 
     try:
         for ABC in ABCs:
@@ -128,3 +134,7 @@ if __name__ == "__main__":
         ABC.heaters_deactivate_all()
         # Disconnect from ABC gracefully
         ABC.stop(end_msg='Done.')
+        # Close the connection to the DC power supply after having deactivated the channels
+        for i in range(len(ABC_ids)):
+            PS.deactivate_channel(i)
+        PS.close()
