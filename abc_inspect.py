@@ -43,12 +43,10 @@ if __name__ == "__main__":
         raise ValueError("At least one ABC must be connected to the RPi!")
 
     PS = PowerSupply()
-    PS.set_channel_voltage(1, 12.0, 1.5,ocp=1.5)
-    PS.activate_channel(1)
-    if len(ABC_ids) == 2:
-        PS.set_channel_voltage(2, 12.0, 1.5,ocp=1.5)
-        PS.activate_channel(2)
-        
+    for i in range(len(ABC_ids)):
+        PS.set_channel_voltage(i+1, 12.0, 1.5,ocp=1.5)
+        PS.activate_channel(i+1)
+
     try:
         # infer cfg file from ABC board_id
         cfg_paths = [Path(f"./brood_hostside/host/cfg/inspection_cfgs/inspection_{ABC_id}.cfg") for ABC_id in ABC_ids] # The inspection config files to use
@@ -59,7 +57,7 @@ if __name__ == "__main__":
     except Exception:
         # Close the connection to the DC power supply after having deactivated the channels
         for i in range(len(ABC_ids)):
-            PS.deactivate_channel(i)
+            PS.deactivate_channel(i+1)
         PS.close()
 
     try:
@@ -136,5 +134,5 @@ if __name__ == "__main__":
         ABC.stop(end_msg='Done.')
         # Close the connection to the DC power supply after having deactivated the channels
         for i in range(len(ABC_ids)):
-            PS.deactivate_channel(i)
+            PS.deactivate_channel(i+1)
         PS.close()
