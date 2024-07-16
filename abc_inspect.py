@@ -58,11 +58,11 @@ if __name__ == "__main__":
 
     except Exception as e:
         # Close the connection to the DC power supply after having deactivated the channels
-        print(f"Problem detected with ABCs setup: {e}")
-        print("Shutting DCPS channels and connection")
+        print("Problem detected with ABCs setup, shutting DCPS channels and connection")
         for i in range(len(ABC_ids)):
             PS.deactivate_channel(i+1)
         PS.close()
+        raise e
 
     try:
         for ABC in ABCs:
