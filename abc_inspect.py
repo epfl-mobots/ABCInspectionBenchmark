@@ -78,7 +78,7 @@ if __name__ == "__main__":
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
 
         while True:
-            time = time.time()
+            start_time = time.time()
             DCPS_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
             DCPS_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
 
@@ -139,7 +139,8 @@ if __name__ == "__main__":
             previous_voltages = DCPS_voltages
 
             # sleep for 0.1 including the time it took to do the measurements
-            time.sleep(0.1 - (time.time() - time))
+            if (0.1-(time.time()-start_time))>0: 
+                time.sleep(0.3 - (time.time() - start_time))
 
     except KeyboardInterrupt:
         ABC.log("Stopping inspection - ctrl-c pressed.", level="INF")
