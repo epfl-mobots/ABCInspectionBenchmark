@@ -73,20 +73,18 @@ if __name__ == "__main__":
         
         heaters_rosen = [None, None] # Heater currently being tested
         temp_target = 31 # Target temperature
-        DCPS_meas_counts = 0 # Number of measurements in one ABC loop
         previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
+        last_second_time = time.time()
 
         while True:
             start_time = time.time()
             DCPS_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
             DCPS_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
 
-            DCPS_meas_counts += 1
-            DCPS_meas_counts = DCPS_meas_counts%10
-
-            # Every 10 measurements, log the DC PS data and ABC data
-            if DCPS_meas_counts == 0:
+            # Every two seconds, log the DC PS data and ABC data
+            if time.time() - last_second_time > 2:
+                last_second_time = time.time()
                 # Logging the DCPS data
                 for i, ABC in enumerate(ABCs):
                     # Send the current and voltage data as data points to influxdb
@@ -103,7 +101,7 @@ if __name__ == "__main__":
                         ABC.loop(consume=False)
 
                         if ABC.i < 5:
-                            continue # Skip the first 5 loops
+                            continue # Skip the first 5 loops before starting the heaters
 
                         if heater_rosen is None:
                             heater_rosen = 0
@@ -116,8 +114,8 @@ if __name__ == "__main__":
                                 heater_rosen += 1
                                 heater_rosen = heater_rosen%10
                                 ABC._activate_dict_of_heaters({heater_rosen:temp_target})
-
-                        time.sleep(0.03)
+                        if len(ABC_ids) > 1:
+                            time.sleep(0.03)
                         
                 except Exception as e:
                     # Try catching everything, so it can continue if not critical
@@ -135,12 +133,12 @@ if __name__ == "__main__":
                         Vpoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
                         ABC.db_handle.write_points([Vpoints])
 
+                # sleep for 0.1 including the time it took to do the measurements
+                if (0.1-(time.time()-start_time))>0: # Sometimes the time it takes is longer than 0.1s, i.e when we log the measurements
+                    time.sleep(0.1 - (time.time() - start_time))
+
             previous_currents = DCPS_currents
             previous_voltages = DCPS_voltages
-
-            # sleep for 0.1 including the time it took to do the measurements
-            if (0.1-(time.time()-start_time))>0: 
-                time.sleep(0.3 - (time.time() - start_time))
 
     except KeyboardInterrupt:
         ABC.log("Stopping inspection - ctrl-c pressed.", level="INF")
