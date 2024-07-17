@@ -76,6 +76,7 @@ if __name__ == "__main__":
         previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
         last_second_time = time.time()
+        points_queue = []
 
         while True:
             start_time = time.time()
@@ -90,7 +91,9 @@ if __name__ == "__main__":
                     # Send the current and voltage data as data points to influxdb
                     Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
                     Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
-                    ABC.db_handle.write_points([Ipoints, Vpoints])
+                    points_queue.extend([Ipoints, Vpoints])
+                ABCs[0].db_handle.write_points(points_queue) # This takes some seconds
+                points_queue = []
 
                 # Now we log the ABC data
                 for i,(ABC, heater_rosen) in enumerate(zip(ABCs, heaters_rosen)):
@@ -120,22 +123,22 @@ if __name__ == "__main__":
                         libui.process_exception(is_bad_err, e, ABC)
 
             else:
-                # Only log the current if it has changed by more than 5%
-                # Only log the voltage if it has changed by more than 1%
+                # Only keep a log the current if it has changed by more than 5%
+                # Only keep a log the voltage if it has changed by more than 1%
                 for i, ABC in enumerate(ABCs):
                     if abs(DCPS_currents[i] - previous_currents[i]) > 0.05*previous_currents[i]:
-                        Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
-                        ABC.db_handle.write_points([Ipoints])
+                        Ipoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
+                        points_queue.append(Ipoint)
                     if abs(DCPS_voltages[i] - previous_voltages[i]) > 0.01*previous_voltages[i]:
-                        Vpoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
-                        ABC.db_handle.write_points([Vpoints])
-
-                # sleep for 0.1 including the time it took to do the measurements
-                if (0.1-(time.time()-start_time))>0: # Sometimes the time it takes is longer than 0.1s, i.e when we log the measurements
-                    time.sleep(0.1 - (time.time() - start_time))
+                        Vpoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
+                        points_queue.append(Vpoint)
 
             previous_currents = DCPS_currents
             previous_voltages = DCPS_voltages
+
+            # Ensure minimum 0.1s between each iteration
+            if (0.1-(time.time()-start_time))>0: # Sometimes the time it takes is longer than 0.1s, i.e when we log the measurements
+                time.sleep(0.1 - (time.time() - start_time))
 
     except KeyboardInterrupt:
         ABC.log("Stopping inspection - ctrl-c pressed.", level="INF")
