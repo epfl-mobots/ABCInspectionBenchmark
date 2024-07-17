@@ -72,7 +72,7 @@ if __name__ == "__main__":
             # ...and start any defined in cfgfile
         
         heaters_rosen = [None, None] # Heater currently being tested
-        temp_target = 31 # Target temperature
+        temp_target = 30 # Target temperature
         previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
         last_second_time = time.time()
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                             heater_rosen = 0
                             ABC._activate_dict_of_heaters({heater_rosen:temp_target})
                         else:       
-                            print(ABC.last_htr_data.h_avg_temp[heater_rosen])             
+                            print(f"Last avg measure of heater{heater_rosen}: " + ABC.last_htr_data.h_avg_temp[heater_rosen])             
                             if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.5:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
@@ -123,10 +123,10 @@ if __name__ == "__main__":
                     libui.process_exception(is_bad_err, e, ABC)
 
             else:
-                # Only log the current if it has changed by more than 20%
+                # Only log the current if it has changed by more than 15%
                 # Only log the voltage if it has changed by more than 1%
                 for i, ABC in enumerate(ABCs):
-                    if abs(DCPS_currents[i] - previous_currents[i]) > 0.2*previous_currents[i]:
+                    if abs(DCPS_currents[i] - previous_currents[i]) > 0.15*previous_currents[i]:
                         Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
                         ABC.db_handle.write_points([Ipoints])
                     if abs(DCPS_voltages[i] - previous_voltages[i]) > 0.01*previous_voltages[i]:
