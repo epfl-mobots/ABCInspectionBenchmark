@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
             # Every two seconds, log the DC PS data and ABC data
             if time.time() - last_second_time > 2:
-                last_second_time = time.time()
+                last_second_time = time.time() # Reset the time of the "last" log
                 # Logging the DCPS data
                 for i, ABC in enumerate(ABCs):
                     # Send the current and voltage data as data points to influxdb
@@ -93,34 +93,31 @@ if __name__ == "__main__":
                     ABC.db_handle.write_points([Ipoints, Vpoints])
 
                 # Now we log the ABC data
-                for ABC in ABCs:
+                for i,(ABC, heater_rosen) in enumerate(zip(ABCs, heaters_rosen)):
                     ABC.check_newday_and_roll_logfiles()
-
-                try:
-                    for ABC, heater_rosen in zip(ABCs, heaters_rosen):
+                    try:
                         ABC.loop(consume=False)
-
                         if ABC.i < 5:
                             continue # Skip the first 5 loops before starting the heaters
 
                         if heater_rosen is None:
-                            heater_rosen = 0
+                            heaters_rosen[i] = 0
                             ABC._activate_dict_of_heaters({heater_rosen:temp_target})
                         else:       
                             print(f"Last avg measure of heater{heater_rosen}: " + ABC.last_htr_data.h_avg_temp[heater_rosen])             
                             if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.5:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
-                                heater_rosen += 1
-                                heater_rosen = heater_rosen%10
+                                heaters_rosen[i] += 1
+                                heaters_rosen[i] = heater_rosen%10
                                 ABC._activate_dict_of_heaters({heater_rosen:temp_target})
                         if len(ABC_ids) > 1:
                             time.sleep(0.03)
-                        
-                except Exception as e:
-                    # Try catching everything, so it can continue if not critical
-                    is_bad_err = libui.handle_known_exceptions(e, logger=ABC.log)
-                    libui.process_exception(is_bad_err, e, ABC)
+
+                    except Exception as e:
+                        # Try catching everything, so it can continue if not critical
+                        is_bad_err = libui.handle_known_exceptions(e, logger=ABC.log)
+                        libui.process_exception(is_bad_err, e, ABC)
 
             else:
                 # Only log the current if it has changed by more than 15%
