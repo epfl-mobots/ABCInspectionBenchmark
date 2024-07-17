@@ -102,15 +102,15 @@ if __name__ == "__main__":
 
                         if heater_rosen is None:
                             heaters_rosen[i] = 0
-                            ABC._activate_dict_of_heaters({heater_rosen:temp_target})
+                            ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         else:       
-                            print(f"Last avg measure of heater{heater_rosen}: " + ABC.last_htr_data.h_avg_temp[heater_rosen])             
+                            print(f"Last avg measure of heater{heater_rosen}: " + str(ABC.last_htr_data.h_avg_temp[heater_rosen]))             
                             if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.5:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
                                 heaters_rosen[i] += 1
                                 heaters_rosen[i] = heater_rosen%10
-                                ABC._activate_dict_of_heaters({heater_rosen:temp_target})
+                                ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         if len(ABC_ids) > 1:
                             time.sleep(0.03)
 
