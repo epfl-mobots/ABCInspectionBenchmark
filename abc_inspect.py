@@ -74,13 +74,13 @@ if __name__ == "__main__":
         heaters_rosen = [None, None] # Heater currently being tested
         temp_target = 31 # Target temperature
         DCPS_meas_counts = 0 # Number of measurements in one ABC loop
-        previous_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
-        previous_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
+        previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
+        previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
 
         while True:
             time = time.time()
-            DCPS_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
-            DCPS_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
+            DCPS_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
+            DCPS_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
 
             DCPS_meas_counts += 1
             DCPS_meas_counts = DCPS_meas_counts%10
