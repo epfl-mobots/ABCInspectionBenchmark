@@ -92,6 +92,7 @@ if __name__ == "__main__":
                     Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
                     Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
                     points_queue.extend([Ipoints, Vpoints])
+                print(points_queue)
                 ABCs[0].db_handle.write_points(points_queue) # This takes some seconds
                 points_queue = []
 
@@ -126,9 +127,12 @@ if __name__ == "__main__":
                 # Only keep a log the current if it has changed by more than 5%
                 # Only keep a log the voltage if it has changed by more than 1%
                 for i, ABC in enumerate(ABCs):
-                    if abs(DCPS_currents[i] - previous_currents[i]) > 0.05*previous_currents[i]:
-                        Ipoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
-                        points_queue.append(Ipoint)
+                    # Take new measurements closer to real time
+                    DCPS_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
+                    DCPS_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
+                    #if abs(DCPS_currents[i] - previous_currents[i]) > 0.0005*previous_currents[i]:
+                    Ipoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
+                    points_queue.append(Ipoint)
                     if abs(DCPS_voltages[i] - previous_voltages[i]) > 0.01*previous_voltages[i]:
                         Vpoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
                         points_queue.append(Vpoint)
