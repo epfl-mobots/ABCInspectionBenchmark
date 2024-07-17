@@ -5,7 +5,6 @@ Library for interfacing with the DP832A power supply.
 import pyvisa
 
 class PowerSupply:
-    @classmethod
     def current_safe(current):
         """Check if the current is within the safety limits."""
         if current > 1.2:

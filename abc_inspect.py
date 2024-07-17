@@ -23,7 +23,7 @@ def verify_abc_cfg_file(cfg_path):
         raise FileNotFoundError(f"No config file found at '{cfg_path}'!")
     return True
 
-def prep_point_influx(self, time,board_id, value, field, debug:bool=False) -> dict:
+def prep_point_influx(time, board_id, value, field, debug:bool=False) -> dict:
         point = {
             "time": ABCHandle.timestamp4db(time),
             "tags": {board_id: board_id},
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         print(cfg_paths)
         for cfg_path in cfg_paths:
             verify_abc_cfg_file(cfg_path)
-        time.sleep(20) # Wait for the ABCs to boot up
+        time.sleep(5) # Wait for the ABCs to boot up
         ABCs = [ABCHandle(cfg_path) for cfg_path in cfg_paths] # instantiate ABC objects
 
     except Exception as e:
@@ -74,11 +74,12 @@ if __name__ == "__main__":
         heater_rosen = [None, None] # Heater currently being tested
         temp_target = 31 # Target temperature
         DCPS_meas_counts = 0 # Number of measurements in one ABC loop
-
+        previous_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
+        previous_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
         while True:
             # Log the DCPS data
-            DCPS_currents = [PS.query_current(i) for i in range(len(ABC_ids))]
-            DCPS_voltages = [PS.query_voltage(i) for i in range(len(ABC_ids))]
+            DCPS_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
+            DCPS_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
 
             DCPS_meas_counts += 1
             DCPS_meas_counts = DCPS_meas_counts%10
@@ -88,8 +89,8 @@ if __name__ == "__main__":
                 # Logging the DCPS data
                 for i, ABC in enumerate(ABCs):
                     # Send the current and voltage data as data points to influxdb
-                    Ipoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_currents[i], "current")
-                    Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], "voltage")
+                    Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
+                    Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
                     ABC.db_handle.write_points([Ipoints, Vpoints])
 
                 # Check for new day (to roll over logfiles)
