@@ -71,13 +71,14 @@ if __name__ == "__main__":
             ABC.prepare_heaters(False)
             # ...and start any defined in cfgfile
         
-        heater_rosen = [None, None] # Heater currently being tested
+        heaters_rosen = [None, None] # Heater currently being tested
         temp_target = 31 # Target temperature
         DCPS_meas_counts = 0 # Number of measurements in one ABC loop
         previous_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
         previous_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
+
         while True:
-            # Log the DCPS data
+            time = time.time()
             DCPS_currents = [PS.query_current(i+1) for i in range(len(ABC_ids))]
             DCPS_voltages = [PS.query_voltage(i+1) for i in range(len(ABC_ids))]
 
@@ -93,12 +94,12 @@ if __name__ == "__main__":
                     Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
                     ABC.db_handle.write_points([Ipoints, Vpoints])
 
-                # Check for new day (to roll over logfiles)
+                # Now we log the ABC data
                 for ABC in ABCs:
                     ABC.check_newday_and_roll_logfiles()
 
                 try:
-                    for ABC in ABCs:
+                    for ABC, heater_rosen in zip(ABCs, heaters_rosen):
                         ABC.loop(consume=False)
 
                         if ABC.i < 5:
@@ -107,7 +108,8 @@ if __name__ == "__main__":
                         if heater_rosen is None:
                             heater_rosen = 0
                             ABC._activate_dict_of_heaters({heater_rosen:temp_target})
-                        else:                    
+                        else:       
+                            print(ABC.last_htr_data.h_avg_temp[heater_rosen])             
                             if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.5:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
@@ -115,14 +117,29 @@ if __name__ == "__main__":
                                 heater_rosen = heater_rosen%10
                                 ABC._activate_dict_of_heaters({heater_rosen:temp_target})
 
-                        time.sleep(0.1)
+                        time.sleep(0.03)
                         
                 except Exception as e:
                     # Try catching everything, so it can continue if not critical
                     is_bad_err = libui.handle_known_exceptions(e, logger=ABC.log)
                     libui.process_exception(is_bad_err, e, ABC)
 
-            time.sleep(0.1)
+            else:
+                # Only log the current if it has changed by more than 20%
+                # Only log the voltage if it has changed by more than 1%
+                for i, ABC in enumerate(ABCs):
+                    if abs(DCPS_currents[i] - previous_currents[i]) > 0.2*previous_currents[i]:
+                        Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
+                        ABC.db_handle.write_points([Ipoints])
+                    if abs(DCPS_voltages[i] - previous_voltages[i]) > 0.01*previous_voltages[i]:
+                        Vpoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
+                        ABC.db_handle.write_points([Vpoints])
+
+            previous_currents = DCPS_currents
+            previous_voltages = DCPS_voltages
+
+            # sleep for 0.1 including the time it took to do the measurements
+            time.sleep(0.1 - (time.time() - time))
 
     except KeyboardInterrupt:
         ABC.log("Stopping inspection - ctrl-c pressed.", level="INF")
