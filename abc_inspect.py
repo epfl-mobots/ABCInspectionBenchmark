@@ -14,7 +14,7 @@ import time
 from libPS import PowerSupply
 
 # Make a two element list that contains strings of the board_id of the two ABCs
-ABC_ids = ['abc24'] # the ABCs connected to the RPi (max 2 because only two 12V sockets on the PS)
+ABC_ids = ['abc23', 'abc24'] # the ABCs connected to the RPi (max 2 because only two 12V sockets on the PS)
 
 def verify_abc_cfg_file(cfg_path): 
     ''' Check if config file exists '''
@@ -26,7 +26,7 @@ def verify_abc_cfg_file(cfg_path):
 def prep_point_influx(time, board_id, value, field, debug:bool=False) -> dict:
         point = {
             "time": ABCHandle.timestamp4db(time),
-            "tags": {board_id: board_id},
+            "tags": {"board_id": board_id},
             "measurement": "DCPS",
             "fields": {field: value},
         }
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             # ...and start any defined in cfgfile
         
         heaters_rosen = [None, None] # Heater currently being tested
-        temp_target = 26 # Target temperature
+        temp_target = 30 # Target temperature
         previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
         last_second_time = time.time()
@@ -92,7 +92,6 @@ if __name__ == "__main__":
                     Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
                     Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
                     points_queue.extend([Ipoints, Vpoints])
-                print(points_queue)
                 ABCs[0].db_handle.write_points(points_queue) # This takes some seconds
                 points_queue = []
 
@@ -130,9 +129,9 @@ if __name__ == "__main__":
                     # Take new measurements closer to real time
                     DCPS_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
                     DCPS_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
-                    #if abs(DCPS_currents[i] - previous_currents[i]) > 0.0005*previous_currents[i]:
-                    Ipoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
-                    points_queue.append(Ipoint)
+                    if abs(DCPS_currents[i] - previous_currents[i]) > 0.05*previous_currents[i]:
+                        Ipoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
+                        points_queue.append(Ipoint)
                     if abs(DCPS_voltages[i] - previous_voltages[i]) > 0.01*previous_voltages[i]:
                         Vpoint = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_voltages[i], field="voltage")
                         points_queue.append(Vpoint)
