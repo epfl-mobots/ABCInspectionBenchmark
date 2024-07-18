@@ -87,10 +87,10 @@ if __name__ == "__main__":
             if time.time() - last_second_time > 2:
                 last_second_time = time.time() # Reset the time of the "last" log
                 # Logging the DCPS data
-                for i, ABC in enumerate(ABCs):
+                for i,ABC_id in enumerate(ABC_ids):
                     # Send the current and voltage data as data points to influxdb
-                    Ipoints = prep_point_influx(time=time.time(),board_id= ABC_ids[i], value=DCPS_currents[i], field="current")
-                    Vpoints = prep_point_influx(time.time(), ABC_ids[i], DCPS_voltages[i], field="voltage")
+                    Ipoints = prep_point_influx(time=time.time(),board_id= ABC_id, value=DCPS_currents[i], field="current")
+                    Vpoints = prep_point_influx(time.time(), ABC_id, DCPS_voltages[i], field="voltage")
                     points_queue.extend([Ipoints, Vpoints])
                 ABCs[0].db_handle.write_points(points_queue) # This takes some seconds
                 points_queue = []
@@ -107,15 +107,14 @@ if __name__ == "__main__":
                             heaters_rosen[i] = 0
                             ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         else:       
-                            print(f"Last avg measure of heater{heater_rosen}: " + str(ABC.last_htr_data.h_avg_temp[heater_rosen]))             
-                            if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.1:
+                            if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.2:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
                                 heaters_rosen[i] += 1
                                 heaters_rosen[i] = heaters_rosen[i]%10
                                 ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         if len(ABC_ids) > 1:
-                            time.sleep(0.03)
+                            time.sleep(0.01)
 
                     except Exception as e:
                         # Try catching everything, so it can continue if not critical
@@ -157,6 +156,8 @@ if __name__ == "__main__":
         # Disconnect from ABC gracefully
         ABC.stop(end_msg='Done.')
         # Close the connection to the DC power supply after having deactivated the channels
+        print("Shutting DCPS channels and connection")
         for i in range(len(ABC_ids)):
+            print("Channel", i+1, " deactivated")
             PS.deactivate_channel(i+1)
         PS.close()
