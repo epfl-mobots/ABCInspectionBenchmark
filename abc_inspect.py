@@ -156,13 +156,15 @@ if __name__ == "__main__":
         #       experiment, when e.g. the script fails due
         #       to the SD card becoming unwritable:
         #       The ABC will be unnecessarily deactivated!
-        ABC.log("Deactivating all heaters before stop.")
-        ABC.heaters_deactivate_all()
-        # Disconnect from ABC gracefully
-        ABC.stop(end_msg='Done.')
+        for ABC in ABCs:
+            ABC.log("Deactivating all heaters before stop.")
+            ABC.heaters_deactivate_all()
+            # Disconnect from ABC gracefully
+            ABC.stop(end_msg='Done.')
+            time.sleep(0.5)
         # Close the connection to the DC power supply after having deactivated the channels
         print("Shutting DCPS channels and connection")
-        for i in range(len(ABC_ids)):
+        for i in range(len(ABCs)):
             print("Channel", i+1, " deactivated")
             PS.deactivate_channel(i+1)
         PS.close()
