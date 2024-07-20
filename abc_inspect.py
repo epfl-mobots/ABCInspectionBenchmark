@@ -16,6 +16,9 @@ from libPS import PowerSupply
 # Make a two element list that contains strings of the board_id of the two ABCs
 ABC_ids = ['abc23', 'abc24'] # the ABCs connected to the RPi (max 2 because only two 12V sockets on the PS)
 
+DELTA_T = 5 # The temperature difference targeted for heater cycles
+MAX_TEMP_TARGET = 33
+
 def verify_abc_cfg_file(cfg_path): 
     ''' Check if config file exists '''
     cfg_path = cfg_path.expanduser()
@@ -72,7 +75,7 @@ if __name__ == "__main__":
             # ...and start any defined in cfgfile
         
         heaters_rosen = [None, None] # Heater currently being tested
-        temp_target = 30 # Target temperature
+        temp_target = None
         previous_currents = [float(PS.query_current(i+1)) for i in range(len(ABC_ids))]
         previous_voltages = [float(PS.query_voltage(i+1)) for i in range(len(ABC_ids))]
         last_second_time = time.time()
@@ -105,13 +108,15 @@ if __name__ == "__main__":
 
                         if heater_rosen is None:
                             heaters_rosen[i] = 0
+                            temp_target = min(ABC.last_htr_data.h_avg_temp[heaters_rosen[i]] + DELTA_T, MAX_TEMP_TARGET)
                             ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         else:       
-                            if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.2:
+                            if ABC.last_htr_data.h_avg_temp[heater_rosen] >= temp_target-1.3:
                                 ABC.set_heater_active(heater_rosen, False)
                                 ABC.set_heater_objective(heater_rosen, 0)
                                 heaters_rosen[i] += 1
                                 heaters_rosen[i] = heaters_rosen[i]%10
+                                temp_target = min(ABC.last_htr_data.h_avg_temp[heaters_rosen[i]] + DELTA_T, MAX_TEMP_TARGET)
                                 ABC._activate_dict_of_heaters({heaters_rosen[i]:temp_target})
                         if len(ABC_ids) > 1:
                             time.sleep(0.01)
